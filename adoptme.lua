@@ -76,7 +76,7 @@ local UserConfig = {
     Telemetry = {
         Enabled = false,
         IncludeInventory = false,
-        SendFiles = false, -- developer telemetry disabled
+        SendFiles = false, -- the newest part of the farm's log files with each report (see the report text)
     },
     Notifications = {
         Enabled = true,
@@ -102,6 +102,27 @@ local UserConfig = {
         IncludeUsername = true,
     },
 }
+-- Cable MCP bridge: start once, asynchronously, without blocking the autofarm GUI.
+-- The Node.js MCP server must already be running on this computer.
+task.spawn(function()
+    local env = (type(getgenv) == "function" and getgenv()) or _G
+    if env.CableMCPBridgeLoading then return end
+    env.CableMCPBridgeLoading = true
+    local bridgeUrl = env.BridgeURL or "localhost:16384"
+    local ok, err = pcall(function()
+        local source = game:HttpGet("http://" .. bridgeUrl .. "/script.luau")
+        local loader, compileError = loadstring(source)
+        if not loader then error(compileError) end
+        loader()
+    end)
+    env.CableMCPBridgeLoading = false
+    if not ok then
+        env.CableMCPBridgeError = tostring(err)
+    else
+        env.CableMCPBridgeError = nil
+    end
+end)
+
 local __moduleSources = {}
 local __moduleCache = {}
 local __LOADING = {}
@@ -537,8 +558,8 @@ __moduleSources["Core/Config"] = function(...)
             Url = "",
             Owner = "victimoffate_",
             SummaryMinutes = 30,
-            IncludeInventory = true,
-            SendFiles = true,
+            IncludeInventory = false,
+            SendFiles = false,
         },
         Notifications = {
             Enabled = false,
@@ -910,10 +931,6 @@ __moduleSources["Core/Config"] = function(...)
         end
         local config = merge(base, overrides, "", warnings)
         config.Preset = presetId
-        -- Never send developer telemetry, even if saved settings or a loader override it.
-        config.Telemetry.Enabled = false
-        config.Telemetry.IncludeInventory = false
-        config.Telemetry.SendFiles = false
         -- v2.1.11 (user: "Pick what to buy shows only 2 items"): the shop list is the script's catalog, not a setting:
         -- a list saved by an older version (2 pets) no longer hides the new entries (Skelicorn, Poltergeist Box)
         pcall(function()
@@ -20805,92 +20822,3 @@ if not startOk then
         writefile("AdoptMeFarm/start_error.txt", os.date("%Y-%m-%d %H:%M:%S") .. " Failed to start: " .. tostring(startError) .. "\n")
     end)
 end
--- Cable local MCP stats bridge; independent of the autofarm GUI and developer telemetry.
-task.spawn(function()
-    -- Adopt Me -> Local Roblox Tracker
-    -- Run separately from the autofarm. Disable its original Telemetry first.
-    local Players = game:GetService("Players")
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local HttpService = game:GetService("HttpService")
-    local player = Players.LocalPlayer
-    local URL = "http://127.0.0.1:16384/api/tracker"
-    local INTERVAL = 15
-    
-    local requestFn = request or http_request or (syn and syn.request) or (http and http.request)
-    if type(requestFn) ~= "function" then return end
-    
-    local env = (type(getgenv) == "function" and getgenv()) or _G
-    if env.CableAdoptTrackerStop then env.CableAdoptTrackerStop() end
-    local running = true
-    env.CableAdoptTrackerStop = function() running = false end
-    
-    local function snapshot()
-        local ok, clientData = pcall(function()
-            return require(ReplicatedStorage.ClientModules.Core.ClientData)
-        end)
-        if not ok or not clientData then return nil end
-        local okData, data = pcall(function() return clientData.get_data() end)
-        if not okData or type(data) ~= "table" then return nil end
-        local mine = data[player.Name]
-        if type(mine) ~= "table" then return nil end
-    
-        local inventory = mine.inventory or {}
-        local food = inventory.food or {}
-        local pets = inventory.pets or {}
-        local potions, petCount, eggs, neon, mega, fullGrown = 0, 0, 0, 0, 0, 0
-        for _, item in pairs(food) do
-            if type(item) == "table" then
-                local kind = string.lower(tostring(item.kind or item.id or ""))
-                if kind == "pet_age_potion" then
-                    potions = potions + (tonumber(item.count) or 1)
-                end
-            end
-        end
-        for _, item in pairs(pets) do
-            if type(item) == "table" then
-                local kind = string.lower(tostring(item.kind or ""))
-                if item.is_egg or string.find(kind, "egg", 1, true) then
-                    eggs = eggs + 1
-                else
-                    petCount = petCount + 1
-                    local props = item.properties or {}
-                    if props.mega_neon then mega = mega + 1
-                    elseif props.neon then neon = neon + 1 end
-                    if (tonumber(props.age) or 1) >= 6 then fullGrown = fullGrown + 1 end
-                end
-            end
-        end
-        return {
-            gameType = "adoptme",
-            username = player.Name,
-            userId = player.UserId,
-            bucks = tonumber(mine.money) or 0,
-            candy = tonumber(mine.candy_2026) or 0,
-            stars = tonumber(mine.stars) or 0,
-            recycler_tickets = tonumber(mine.pet_recycler_tickets_2026) or 0,
-            age_up_potions = potions,
-            pets_total = petCount,
-            eggs = eggs,
-            neon = neon,
-            mega = mega,
-            full_grown = fullGrown,
-        }
-    end
-    
-    task.spawn(function()
-        while running do
-            local data = snapshot()
-            if data then
-                pcall(function()
-                    requestFn({
-                        Url = URL,
-                        Method = "POST",
-                        Headers = { ["Content-Type"] = "application/json" },
-                        Body = HttpService:JSONEncode(data),
-                    })
-                end)
-            end
-            task.wait(INTERVAL)
-        end
-    end)
-end)
