@@ -6961,7 +6961,7 @@ __moduleSources["Services/Interface"] = function(...)
             }, "\n")
         end
         do -- v3.0.0: what's new since v2, by topic, every line wrapped to the window
-            local changelog = supportTab:CreateGroupbox({ Name = "What's new in v3", Icon = I("scroll-text"), Column = 1 },
+            local changelog = supportTab:CreateGroupbox({ Name = "What's new in v3", Icon = I("scroll-text"), Column = col(2) },
                 "changelog")
             local width = wide and 40 or 56
             for index, section in ipairs(Interface.WHATS_NEW) do
