@@ -4775,7 +4775,7 @@ __moduleSources["Services/Interface"] = function(...)
         local parent = (type(gethui) == "function" and gethui()) or game:GetService("CoreGui")
         local displayOrder = 100000
         for _, other in ipairs(parent:GetChildren()) do
-            if other.Name == "AVBlackScreen" then -- left by an earlier run of the script
+            if (other.Name == "AVBlackScreen" or other.Name == "LunoxBlackScreen") then -- left by an earlier run of the script
                 pcall(function()
                     other:Destroy()
                 end)
@@ -4874,7 +4874,7 @@ __moduleSources["Services/Interface"] = function(...)
             return item
         end
         local gui = Instance.new("ScreenGui")
-        gui.Name = "AVBlackScreen"
+        gui.Name = "LunoxBlackScreen"
         gui.ResetOnSpawn = false
         gui.IgnoreGuiInset = true
         gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -5183,42 +5183,12 @@ __moduleSources["Services/Interface"] = function(...)
             end)
             pcall(screen.destroy)
         end)
-        invite.Activated:Connect(function()
-            pcall(function()
-                local copied = pcall(function()
-                    setclipboard(link)
-                end)
-                invite.Text = copied and T("Copied: %s", link) or link
-                task.delay(3, function()
-                    pcall(function()
-                        if alive then
-                            invite.Text = inviteText
-                        end
-                    end)
-                end)
-            end)
-        end)
         task.spawn(function()
             pcall(function()
                 local image = Interface.developerAvatar()
                 if alive and type(image) == "string" and image ~= "" then
                     logo.Image = image
                     initials.Visible = false
-                end
-            end)
-        end)
-        task.spawn(function()
-            pcall(function()
-                local found = Interface.discordInfo()
-                if alive and type(found) == "table" and found.name then
-                    local parts = { found.name }
-                    if found.members then
-                        table.insert(parts, T("%s members", commas(found.members)))
-                    end
-                    if found.online then
-                        table.insert(parts, T("%s online", commas(found.online)))
-                    end
-                    server.Text = table.concat(parts, "  •  ")
                 end
             end)
         end)
