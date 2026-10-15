@@ -4772,7 +4772,7 @@ __moduleSources["Services/Interface"] = function(...)
         local alive, suspended, holds = true, false, 0
         local connections = {}
         local capped, capBefore
-        local parent = (type(gethui) == "function" and gethui()) or game:GetService("CoreGui")
+        local parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
         local displayOrder = 100000
         for _, other in ipairs(parent:GetChildren()) do
             if (other.Name == "AVBlackScreen" or other.Name == "LunoxBlackScreen") then -- left by an earlier run of the script
@@ -4885,16 +4885,18 @@ __moduleSources["Services/Interface"] = function(...)
         pcall(function()
             gui.OnTopOfCoreBlur = true
         end)
+        gui.Enabled = true
         -- the black is a button: a tap on it goes nowhere (not to the game, not to the window under it)
         local back = Instance.new("TextButton")
         back.Name = "Back"
         back.AutoButtonColor = false
         back.Text = ""
         back.BorderSizePixel = 0
-        back.BackgroundColor3 = Color3.new(1, 1, 1)
+        back.BackgroundColor3 = Color3.new(0, 0, 0)
+        back.BackgroundTransparency = 0
         back.Position = UDim2.fromOffset(-100, -100)
         back.Size = UDim2.new(1, 200, 1, 200)
-        gradient(back, Color3.fromRGB(14, 8, 24), Color3.fromRGB(2, 1, 4), 90)
+        -- Opaque black fallback even if gradient rendering fails.
         back.Parent = gui
         local body = Instance.new("Frame")
         body.Name = "Body"
@@ -5192,9 +5194,10 @@ __moduleSources["Services/Interface"] = function(...)
                 end
             end)
         end)
+        -- Parent the UI before disabling 3D; otherwise some clients render only the blur.
+        gui.Parent = parent
         fitScale()
         pcall(screen.update, options.status)
-        gui.Parent = parent
         return screen
     end
     local FEED_INFO = { Event = true, Minigame = true }
