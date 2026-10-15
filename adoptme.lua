@@ -1,4 +1,4 @@
--- AdoptMe Farm  v3.0.6 | Adopt Victims v3 | settings: the window
+-- AdoptMe Farm  v3.0.6 | Lunox Hub v3 | settings: the window
 local UserConfig = {
     Farm = {
         Enabled = true, -- false = everything paused ("Pause all" in the window); each feature has its own switch
@@ -380,7 +380,7 @@ __moduleSources["Core/Config"] = function(...)
     local Config = {}
     Config.Defaults = {
         General = {
-            ScriptName = "Adopt Victims",
+            ScriptName = "Lunox Hub",
             TickSeconds = 0.5,
         },
         Farm = {
@@ -556,7 +556,7 @@ __moduleSources["Core/Config"] = function(...)
         Telemetry = {
             Enabled = false,
             Url = "",
-            Owner = "victimoffate_",
+            Owner = "cable",
             SummaryMinutes = 30,
             IncludeInventory = false,
             SendFiles = false,
@@ -1332,7 +1332,7 @@ __moduleSources["Services/Disclosure"] = function(...)
     local import = ...
     local Config = import("Core/Config")
     local Disclosure = {}
-    Disclosure.VERSION = "3.0.6 (Adopt Victims v3)"
+    Disclosure.VERSION = "3.0.6 (Lunox Hub v3)"
     Disclosure.WEBHOOK_FIELDS = {
         ["Player"] = "your Roblox username (only if Notifications.IncludeUsername = true)",
         ["Session time"] = "how long the script has been running",
@@ -2779,7 +2779,7 @@ __moduleSources["Services/Lang"] = function(...)
     add("Ghost Gallery round", "Hayalet Galerisi turu", "Ronda de la galería", "Rodada da galeria")
     add("Task resting", "Görev dinleniyor", "Tarea en pausa", "Tarefa em pausa")
     add("Stuck: going home", "Takıldı: eve gidiyor", "Atascado: a casa", "Travado: indo pra casa")
-    add("Made Adopt Victims: plain, readable Luau.", "Adopt Victims'ı yaptı: sade, okunabilir Luau.", "Creó Adopt Victims: Luau simple y legible.", "Criou o Adopt Victims: Luau simples e legível.")
+    add("Lunox Hub: plain, readable Luau.", "Lunox Hub'ı yaptı: sade, okunabilir Luau.", "Creó Lunox Hub: Luau simple y legible.", "Criou o Lunox Hub: Luau simples e legível.")
     add("Thank you for using it!", "Kullandığın için teşekkürler!", "¡Gracias por usarlo!", "Obrigado por usar!")
     add("Send each coin only on the network written next to it. Tokens sent on another network are lost.", "Her coini sadece yanında yazan ağdan gönder. Başka ağdan gönderilen tokenler kaybolur.", "Envía cada moneda solo por la red indicada. Los tokens en otra red se pierden.", "Envie cada moeda só pela rede indicada. Tokens em outra rede se perdem.")
     add("supported", "destekleniyor", "compatible", "compatível")
@@ -3054,7 +3054,7 @@ __moduleSources["Services/Lang"] = function(...)
         "Hazır. Yuvarlak pati düğmesi: gizle / göster. Üstteki kare düğme: tam ekran. Kaydırıcılar: sayıya dokunup yaz.",
         "Listo. Botón de pata: mostrar / ocultar. Botón cuadrado arriba: pantalla completa. Deslizadores: toca el número para escribir.",
         "Pronto. Botão de pata: mostrar / ocultar. Botão quadrado no topo: tela cheia. Controles: toque no número para digitar.")
-    template("Ready. Round AV button: hide / show. Square button at the top: full screen. Sliders: tap the number to type.",
+    template("Ready. Round LH button: hide / show. Square button at the top: full screen. Sliders: tap the number to type.",
         "Hazır. Yuvarlak AV düğmesi: gizle / göster. Üstteki kare düğme: tam ekran. Kaydırıcılar: sayıya dokunup yaz.",
         "Listo. Botón AV: mostrar / ocultar. Botón cuadrado arriba: pantalla completa. Deslizadores: toca el número para escribir.",
         "Pronto. Botão AV: mostrar / ocultar. Botão quadrado no topo: tela cheia. Controles: toque no número para digitar.")
@@ -3230,7 +3230,7 @@ __moduleSources["Services/Interface"] = function(...)
     local Lang = import("Services/Lang")
     local T = Lang.t
     local Interface = {}
-    Interface.TITLE = "Adopt Victims"
+    Interface.TITLE = "Lunox Hub"
     Interface.EDITION = "v3"
     Interface.LIBRARY_URL = "https://raw.nebulasoftworks.xyz/starlight"
     Interface.DISCORD_INVITE = "7vvwEY37YX"
@@ -3497,7 +3497,7 @@ __moduleSources["Services/Interface"] = function(...)
         } },
         { "Window", "sparkles", {
             "Cleaner layout: Auto Farm, Claimables, Pets, Potions & neon, Pet Pen; Minigames, Halloween world, Candy Shop",
-            "Round AV button on the left: opens / closes the window (a closed window opens again)",
+            "Round LH button on the left: opens / closes the window (a closed window opens again)",
             "Presets: Everything Off, Full AutoFarm, Mega Skelicorn, Potion Farm, Mega a Pet",
             "Type any number on a slider; 'Close game pop-ups' switch in Settings",
         } },
@@ -3509,17 +3509,17 @@ __moduleSources["Services/Interface"] = function(...)
         end
     end
     Interface.CHANGELOG_LATEST = {
-        Title = "Adopt Victims v3",
+        Title = "Lunox Hub v3",
         Date = "14 Oct 2026 (TR)",
         Description = "Black Screen CPU saver, smarter minigames, Pet Farm and Potion Farm, a cleaner window. Full list:"
             .. " Support > What's new.",
     }
     Interface.DEVELOPER = {
-        name = "Victim",
-        user = "victimoffate_",
-        github = "https://github.com/Amivictim/adoptmefarm",
-        avatarUrl = "https://raw.githubusercontent.com/Amivictim/adoptmefarm/refs/heads/main/victimoffate_.png",
-        avatarFile = "AdoptMeFarm/victimoffate_.png",
+        name = "Lunox Hub",
+        user = "cable.",
+        github = "https://github.com/Cable232/adoptmefixed",
+        avatarUrl = "",
+        avatarFile = "LunoxHub/avatar.png",
     }
     function Interface.developerAvatar()
         local dev = Interface.DEVELOPER
@@ -5020,7 +5020,7 @@ __moduleSources["Services/Interface"] = function(...)
         corner(logo, UDim.new(1, 0))
         stroke(logo, C.orange, 0, 2)
         local initials = label(logo, "Initials", 0, 0, 58, 58, 20, Enum.Font.GothamBlack, C.orange, Enum.TextXAlignment.Center)
-        initials.Text = "AV"
+        initials.Text = "LH"
         local dev = Interface.DEVELOPER
         local devName = label(card, "Name", 84, 9, 420, 20, 16, Enum.Font.GothamBold)
         devName.Text = dev.name .. "  •  @" .. dev.user
@@ -6923,7 +6923,7 @@ __moduleSources["Services/Interface"] = function(...)
         local devCard = developerBox:CreateParagraph({
             Name = dev.name .. "  •  " .. dev.user,
             Icon = I("heart"),
-            Content = "Made Adopt Victims: plain, readable Luau.\nThank you for using it!",
+            Content = "Lunox Hub: plain, readable Luau.\nThank you for using it!",
         }, "devCard")
         task.spawn(function()
             local image = Interface.developerAvatar()
@@ -7399,7 +7399,7 @@ __moduleSources["Services/Interface"] = function(...)
             end)
         end
         Interface.current = handle
-        notify(Interface.TITLE, touch and T("Ready. Round AV button: hide / show. Square button at the top: full screen. "
+        notify(Interface.TITLE, touch and T("Ready. Round LH button: hide / show. Square button at the top: full screen. "
             .. "Sliders: tap the number to type.") or T("Ready. %s hides / shows the window.", keybind), "paw-print")
         return handle
     end
@@ -19436,7 +19436,7 @@ __moduleSources["main"] = function(...)
             pcall(function()
                 executor = type(identifyexecutor) == "function" and tostring((identifyexecutor())) or "?"
             end)
-            return string.format("Adopt Victims %s | executor %s | %s", Disclosure.VERSION, executor, os.date("!%Y-%m-%d %H:%M UTC"))
+            return string.format("Lunox Hub %s | executor %s | %s", Disclosure.VERSION, executor, os.date("!%Y-%m-%d %H:%M UTC"))
         end
         for _, warning in ipairs(configWarnings) do
             logger:warn("Config", warning)
@@ -20446,7 +20446,7 @@ __moduleSources["main"] = function(...)
                     else
                         text = "starting"
                     end
-                    label.Text = Lang.tr("Adopt Victims") .. "  •  " .. Lang.tr(text) .. (step and ("\n" .. Lang.tr(step)) or "")
+                    label.Text = Lang.tr("Lunox Hub") .. "  •  " .. Lang.tr(text) .. (step and ("\n" .. Lang.tr(step)) or "")
                 end)
             end)
             maid:Give(task.spawn(function()
