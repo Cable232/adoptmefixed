@@ -66,7 +66,7 @@ local UserConfig = {
             PetPenSlots = 4,
         },
     },
-    Interface = { Enabled = true, Keybind = "RightShift", Toasts = true, RememberSettings = true, Theme = "Halloween",
+    Interface = { Enabled = true, Keybind = "RightShift", Toasts = true, RememberSettings = true, Theme = "Lunox",
         Descriptions = false, StartHidden = false, Language = "Auto" },
     Logging = {
         ConsoleLevel = "OFF",
@@ -534,7 +534,7 @@ __moduleSources["Core/Config"] = function(...)
             Keybind = "RightShift",
             Toasts = true,
             RememberSettings = true,
-            Theme = "Halloween",
+            Theme = "Lunox",
             Descriptions = false,
             Autoload = "",
             StartHidden = false,
@@ -3233,22 +3233,9 @@ __moduleSources["Services/Interface"] = function(...)
     Interface.TITLE = "Lunox Hub"
     Interface.EDITION = "v3"
     Interface.LIBRARY_URL = "https://raw.nebulasoftworks.xyz/starlight"
-    Interface.DISCORD_INVITE = "7vvwEY37YX"
-    Interface.DONATION_LINKS = {
-        { name = "NOWPayments", icon = "wallet", link = "https://nowpayments.io/donation/victimoffate_" },
-        { name = "Buy Me a Coffee", icon = "coffee", link = "https://buymeacoffee.com/victimoffate_" },
-    }
-    Interface.CRYPTO = {
-        { name = "BTC — Bitcoin", icon = "bitcoin", address = "bc1q7chk329my7q565zwzgvt08xq6avxwakxhrr6vh" },
-        { name = "ETH — Ethereum", icon = "gem", address = "0x9059B726B686F8A7331589E79b3b48743D4238Fc" },
-        { name = "USDT — Ethereum (ERC-20)", icon = "coins", address = "0x9059B726B686F8A7331589E79b3b48743D4238Fc" },
-        { name = "USDC — Ethereum (ERC-20)", icon = "coins", address = "0x9059B726B686F8A7331589E79b3b48743D4238Fc" },
-        { name = "SOL — Solana", icon = "sun", address = "2L5QzYscmeWY3EToMNAQqBrstD3NuxMnMAUQzMShyyxL" },
-        { name = "LTC — Litecoin", icon = "coins", address = "Lc4tjBQ1PPdHyAwpdRAEeAYRMbdXKfeYmZ" },
-        { name = "DOGE — Dogecoin", icon = "dog", address = "D68nRuNHi1m1CKFeitxyNRHfFb2VGhFfTJ" },
-        { name = "XRP — XRP Ledger", icon = "coins", address = "rPo5BAZ5do5rpSGDch5SMQhwKS1VESTF7v" },
-        { name = "TRX — Tron", icon = "coins", address = "TNnh6xN4QoVVgHRBRsQnkrBZ9MztsuwzN6" },
-    }
+    Interface.DISCORD_INVITE = ""
+    Interface.DONATION_LINKS = {}
+    Interface.CRYPTO = {}
     Interface.GAMEPASSES = {
     }
     local ICON_IDS = {
@@ -3392,8 +3379,17 @@ __moduleSources["Services/Interface"] = function(...)
     Interface.THEMES = { "Starlight", "Hollywood Dark", "Tokyo Night", "Catppuccin Mocha", "Crimson", "Nebula", "Neo (Dark)",
         "Orca", "Glacier", "Pacific", "Evergreen", "Luna", "OperaGX", "Ubuntu", "BBot", "Hollywood Fluent", "Hollywood Light",
         "Catppuccin Latte" }
-    Interface.THEME_NAMES = { "Default", "Halloween", "Fresh", "Dark Minimal" }
+    Interface.THEME_NAMES = { "Lunox", "Default", "Halloween", "Fresh", "Dark Minimal" }
     Interface.THEME_PROFILES = {
+        Lunox = {
+            base = "Hollywood Dark",
+            fallback = { "Hollywood Dark", "Neo (Dark)", "Tokyo Night" },
+            accent = { { 245, 245, 245 }, { 190, 190, 190 }, { 125, 125, 125 } },
+            bright = { { 255, 255, 255 }, { 220, 220, 220 }, { 170, 170, 170 } },
+            backgrounds = { Dark = { 9, 9, 11 }, Medium = { 16, 16, 19 }, Light = { 25, 25, 29 },
+                Groupbox = { 20, 20, 24 }, Highlight = { 6, 6, 8 } },
+            divider = { 83, 83, 90 },
+        },
         Default = { base = "Starlight", fallback = { "Starlight" } },
         Halloween = {
             base = "Starlight",
@@ -3516,7 +3512,7 @@ __moduleSources["Services/Interface"] = function(...)
     }
     Interface.DEVELOPER = {
         name = "Lunox Hub",
-        user = "cable.",
+        user = "Cable",
         github = "https://github.com/Cable232/adoptmefixed",
         avatarUrl = "",
         avatarFile = "LunoxHub/avatar.png",
@@ -4766,26 +4762,7 @@ __moduleSources["Services/Interface"] = function(...)
     end
     -- the developer's Discord server: name and member count from Discord's public invite info (nothing of the player
     -- is sent); one try, again after 10 minutes when it failed
-    function Interface.discordInfo()
-        local cache = Interface.discordCache
-        if cache and (cache.ok or os.time() - cache.at < 600) then
-            return cache.ok and cache or nil
-        end
-        cache = { at = os.time(), ok = false }
-        Interface.discordCache = cache
-        pcall(function()
-            local body = game:HttpGet("https://discord.com/api/v10/invites/" .. Interface.DISCORD_INVITE .. "?with_counts=true")
-            local data = game:GetService("HttpService"):JSONDecode(body)
-            local guild = type(data) == "table" and data.guild
-            if type(guild) == "table" and type(guild.name) == "string" and guild.name ~= "" then
-                cache.name = guild.name
-                cache.members = tonumber(data.approximate_member_count)
-                cache.online = tonumber(data.approximate_presence_count)
-                cache.ok = true
-            end
-        end)
-        return cache.ok and cache or nil
-    end
+    function Interface.discordInfo() return nil end
     -- options: window (the window's ScreenGui: not drawn while the black screen is up), onClose (the picture was tapped),
     -- status (first numbers). Returns { update = function(status), destroy = function() }.
     function Interface.blackScreen(options)
@@ -5023,28 +5000,9 @@ __moduleSources["Services/Interface"] = function(...)
         initials.Text = "LH"
         local dev = Interface.DEVELOPER
         local devName = label(card, "Name", 84, 9, 420, 20, 16, Enum.Font.GothamBold)
-        devName.Text = dev.name .. "  •  @" .. dev.user
-        icon(card, "users", 84, 31, 14, Color3.fromRGB(190, 195, 255))
-        local server = label(card, "Server", 103, 30, 400, 16, 12, Enum.Font.GothamMedium, Color3.fromRGB(190, 195, 255))
-        server.Text = T("Join my Discord server")
-        local link = "https://discord.gg/" .. Interface.DISCORD_INVITE
-        local inviteText = "discord.gg/" .. Interface.DISCORD_INVITE .. "  •  " .. T("tap to copy")
-        local invite = Instance.new("TextButton")
-        invite.Name = "Invite"
-        invite.AutoButtonColor = false
-        invite.AutomaticSize = Enum.AutomaticSize.X
-        invite.Position = UDim2.fromOffset(84, 50)
-        invite.Size = UDim2.fromOffset(0, 20)
-        invite.BackgroundColor3 = C.blurple
-        invite.Font = Enum.Font.GothamBold
-        invite.TextSize = 12
-        invite.TextColor3 = Color3.new(1, 1, 1)
-        invite.Text = inviteText
-        local invitePad = Instance.new("UIPadding")
-        invitePad.PaddingLeft, invitePad.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
-        invitePad.Parent = invite
-        corner(invite, UDim.new(1, 0))
-        invite.Parent = card
+        devName.Text = dev.name .. "  •  " .. dev.user
+        local subtitle = label(card, "Subtitle", 84, 34, 360, 18, 12, Enum.Font.GothamMedium, C.muted)
+        subtitle.Text = "Lunox Hub"
         local hint = label(card, "Hint", B.width - 250, 9, 236, 58, 12, Enum.Font.GothamMedium, C.muted,
             Enum.TextXAlignment.Right)
         hint.TextWrapped = true
@@ -6214,7 +6172,7 @@ __moduleSources["Services/Interface"] = function(...)
                 return Window:CreateHomeTab({
                     SupportedExecutors = Interface.SUPPORTED_EXECUTORS,
                     UnsupportedExecutors = {},
-                    DiscordInvite = Interface.DISCORD_INVITE,
+                    DiscordInvite = "",
                     Backdrop = 0,
                     IconStyle = 1,
                     Changelog = { Interface.CHANGELOG_LATEST },
@@ -6952,18 +6910,10 @@ __moduleSources["Services/Interface"] = function(...)
             end)
         end)
         developerBox:CreateButton({
-            Name = "Copy Discord invite",
-            Icon = I("ph:discord-logo"),
-            IndicatorStyle = 1,
-            Callback = function()
-                copy("Discord", "https://discord.gg/" .. Interface.DISCORD_INVITE)
-            end,
-        }, "supportDiscord")
-        developerBox:CreateButton({
             Name = "Copy problem report",
             Icon = I("bug"),
             IndicatorStyle = 1,
-            Tooltip = "Copies the last 120 lines of what the script did: paste it to the developer on Discord",
+            Tooltip = "Copies the last 120 lines of what the script did: share it with Lunox Hub",
             Callback = function()
                 local logger = options and options.logger
                 local text = logger and logger.problemReport and logger:problemReport() or "no log"
@@ -6973,7 +6923,7 @@ __moduleSources["Services/Interface"] = function(...)
                 if logger and logger.saveProblemReport then
                     logger:saveProblemReport()
                 end
-                notify("Problem report", copied and "Copied: paste it to the developer on Discord"
+                notify("Problem report", copied and "Copied: share it with Lunox Hub"
                     or "Saved to AdoptMeFarm/problem_report.txt (your executor's workspace folder)", "bug")
             end,
         }, "problemReport")
@@ -7030,17 +6980,6 @@ __moduleSources["Services/Interface"] = function(...)
             executorInfo = executorBox:CreateParagraph({ Name = "Your setup", Icon = I("monitor"), Content = executorText() },
                 "executorInfo")
         end
-        local donate = supportTab:CreateGroupbox({ Name = "Donate", Icon = I("heart"), Column = 1 }, "donate")
-        for index, entry in ipairs(Interface.DONATION_LINKS) do
-            donate:CreateButton({
-                Name = entry.name,
-                Icon = I(entry.icon),
-                IndicatorStyle = 1,
-                Callback = function()
-                    copy(entry.name, entry.link)
-                end,
-            }, "donateLink" .. index)
-        end
         if #Interface.GAMEPASSES > 0 then
             local passes = supportTab:CreateGroupbox({ Name = "Game passes", Icon = I("ticket"), Column = 1 }, "passes")
             for index, entry in ipairs(Interface.GAMEPASSES) do
@@ -7055,22 +6994,6 @@ __moduleSources["Services/Interface"] = function(...)
                     end,
                 }, "pass" .. index)
             end
-        end
-        local crypto = supportTab:CreateGroupbox({ Name = "Crypto (tap to copy)", Icon = I("bitcoin"), Column = col(2) }, "crypto")
-        crypto:CreateParagraph({
-            Name = "Correct network only",
-            Icon = I("triangle-alert"),
-            Content = "Send each coin only on the network written next to it. Tokens sent on another network are lost.",
-        }, "cryptoWarning")
-        for index, entry in ipairs(Interface.CRYPTO) do
-            crypto:CreateButton({
-                Name = entry.name,
-                Icon = I(entry.icon),
-                IndicatorStyle = 1,
-                Callback = function()
-                    copy(entry.name, entry.address)
-                end,
-            }, "crypto" .. index)
         end
         handle.openSettings = function()
             return Interface.openTab(configTab)
