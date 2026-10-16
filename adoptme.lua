@@ -1,3 +1,9 @@
+local function rename(remotename,hashedremote)
+    hashedremote.Name = remotename
+end
+
+table.foreach(getupvalue(require(game:GetService("ReplicatedStorage"):WaitForChild("Fsys")).load("RouterClient").init,4),rename)
+
 -- AdoptMe Farm  v3.0.6 | Lunox Hub v3 | settings: the window
 local UserConfig = {
     Farm = {
@@ -41,11 +47,12 @@ local UserConfig = {
         },
         DisableMinutes = 15,
         Event = {
-            GhostGallery = false,
-            Hauntlet = false,
-            HauntletMove = "tween", -- how the bot reaches a door's circle: "tween" (smooth) | "walk" | "tp"
-            HauntletMoveSeconds = 0.5, -- tween: seconds to reach the circle (0.1 - 5)
-            UsePrompt = true, -- go to the minigames by the game's own "Teleport there now?" prompt (home first)
+            Enabled = true,
+            GhostGallery = true,
+            Hauntlet = true,
+            HauntletMove = "tp", -- instant tp into circle at 1 min mark
+            HauntletMoveSeconds = 0.5,
+            UsePrompt = false, -- direct tp without going home
             HauntletSquad = true, -- your accounts in one run play as a team (phone / keys / wand by turns)
             HauntletSquadKey = "", -- private: only accounts with the relay's SQUAD_KEY ask it who is in the run (never shared)
             StrayCat = false,
@@ -487,11 +494,11 @@ __moduleSources["Core/Config"] = function(...)
             },
             Event = {
                 Enabled = true,
-                GhostGallery = false,
-                Hauntlet = false,
-                HauntletMove = "tween", -- "tween" (smooth, default) | "walk" | "tp": how the bot reaches a door's circle
-                HauntletMoveSeconds = 0.5, -- tween: seconds to reach the circle (0.1 - 5; the room's time is ~25 s)
-                UsePrompt = true,
+                GhostGallery = true,
+                Hauntlet = true,
+                HauntletMove = "tp",
+                HauntletMoveSeconds = 0.5,
+                UsePrompt = false,
                 HauntletSquad = true, -- several of your accounts in one run: shared items (phone, keys, wand) by turns
                 HauntletSquadKey = "", -- private squad key (= the worker's SQUAD_KEY secret): empty = nothing is sent
                 GhostJoinByZone = true,
@@ -7547,19 +7554,24 @@ __moduleSources["Game/GameConstants"] = function(...)
     GameConstants.HouseFurnitureFolderPath = { "HouseInteriors", "furniture" }
     GameConstants.FurnitureUniqueAttribute = "furniture_unique"
     GameConstants.FurnitureForAilment = {
-        sleepy = { "basicbed" },
-        dirty = { "stylishshower", "modernshower", "cheap_pet_bathtub_tutorial" },
+        sleepy = { "basicbed", "basiccrib", "pet_bed", "rattan_petbed", "influencer_2022_pet_bed" },
+        dirty = { "cheap_pet_bathtub", "modernshower", "stylishshower", "cheap_pet_bathtub_tutorial" },
         toilet = { "toilet" },
     }
     GameConstants.PetFoodBowls = { "ailments_refresh_2024_cheap_food_bowl" }
     GameConstants.PetOnlyFurniture = { cheap_pet_bathtub_tutorial = true }
     GameConstants.UseBlockForFurniture = {
         modernshower = "UseBlock",
+        cheap_pet_bathtub = "UseBlock",
         cheap_pet_bathtub_tutorial = "UseBlock",
+        basiccrib = "UseBlock",
         ailments_refresh_2024_cheap_food_bowl = "UseBlock",
         basicbed = "Seat1",
         stylishshower = "UseBlock",
         toilet = "Seat1",
+        pet_bed = "Seat1",
+        rattan_petbed = "Seat1",
+        influencer_2022_pet_bed = "Seat1",
     }
     GameConstants.ItemCategory = "food"
     GameConstants.ItemsForAilment = {
@@ -10144,7 +10156,7 @@ __moduleSources["Game/Interaction"] = function(...)
         if action.hauntletMessage then
             local sessionId, message, value = ...
             local okSession = type(sessionId) == "string" and string.sub(sessionId, 1, 10) == "hauntlet::"
-            local okDoor = message == "try_pick_door" and (value == 1 or value == 2 or value == 3)
+            local okDoor = message == "try_pick_door" and (type(value) == "number" and value >= 1 and value <= 4)
             local okItem = message == "try_use_item" and type(value) == "string" and GameConstants.Event.HauntletItems[value] == true
             if select("#", ...) ~= 3 or not okSession or not (okDoor or okItem) then
                 error("Interaction: " .. actionName .. " may not send " .. tostring(message) .. " " .. tostring(value), 2)
@@ -10722,32 +10734,50 @@ __moduleSources["Game/Furniture"] = function(...)
         end
         return nil
     end
+    local KNOWN_HOUSE_SPOTS = {
+        toilet = { key = "f-13", kind = "toilet", useName = "Seat1", cframe = CFrame.new(-5961.64844, 4002.77393, -9012.5, 0, 0, 1, 0, 1, 0, -1, 0, 0) },
+        basicbed = { key = "f-24", kind = "basicbed", useName = "Seat1", cframe = CFrame.new(-5987.70166, 4002.44019, -9029.98535, 0, 0, -1, 0, 1, 0, 1, 0, 0) },
+        basiccrib = { key = "f-17", kind = "basiccrib", useName = "UseBlock", cframe = CFrame.new(-5992.97803, 4000.67773, -9030.37305, -1, 0, 0, 0, 1, 0, 0, 0, -1) },
+        modernshower = { key = "f-22", kind = "modernshower", useName = "UseBlock", cframe = CFrame.new(-5961.55127, 4002.07837, -9003.55176, 0, 0, 1, 0, 1, 0, -1, 0, 0) },
+        cheap_pet_bathtub = { key = "f-1", kind = "cheap_pet_bathtub", useName = "UseBlock", cframe = CFrame.new(-5960.54346, 4000.47949, -9008.43457, -1, 0, 0, 0, 1, 0, 0, 0, -1) },
+        cheap_pet_bathtub_tutorial = { key = "f-1", kind = "cheap_pet_bathtub_tutorial", useName = "UseBlock", cframe = CFrame.new(-5960.54346, 4000.47949, -9008.43457, -1, 0, 0, 0, 1, 0, 0, 0, -1) },
+    }
     function Furniture.useCFrame(usePart)
         return usePart.CFrame * CFrame.new(0, usePart.Size.Y / 2, 0)
     end
     function Furniture:findSpot(kinds)
-        if self._state:get("player.interior") ~= GameConstants.HouseInteriorName then
-            return nil, "not at home"
-        end
-        local candidates = self:_keysOfKinds(kinds)
-        if #candidates == 0 then
-            return nil, "no " .. table.concat(kinds, "/") .. " in your house"
-        end
-        for _, candidate in ipairs(candidates) do
-            local model = self:_findModel(candidate.key)
-            local useName = GameConstants.UseBlockForFurniture[candidate.kind]
-            local useBlocks = model and model:FindFirstChild("UseBlocks")
-            local usePart = useBlocks and useName and useBlocks:FindFirstChild(useName)
-            if usePart then
-                return {
-                    key = candidate.key,
-                    kind = candidate.kind,
-                    useName = useName,
-                    cframe = Furniture.useCFrame(usePart),
-                }
+        local folder = workspace:FindFirstChild("HouseInteriors") and workspace.HouseInteriors:FindFirstChild("furniture")
+        if folder then
+            for _, holder in ipairs(folder:GetChildren()) do
+                local model = holder:FindFirstChildWhichIsA("Model")
+                if model then
+                    local modelName = string.lower(model.Name)
+                    for _, kind in ipairs(kinds) do
+                        if modelName == string.lower(kind) or string.find(modelName, string.lower(kind)) then
+                            local ubFolder = model:FindFirstChild("UseBlocks")
+                            local useName = GameConstants.UseBlockForFurniture[kind]
+                            local usePart = ubFolder and (useName and ubFolder:FindFirstChild(useName) or ubFolder:GetChildren()[1])
+                            if usePart then
+                                local key = string.match(holder.Name, "(f%-%d+)$") or holder.Name
+                                return {
+                                    key = key,
+                                    kind = kind,
+                                    useName = usePart.Name,
+                                    cframe = Furniture.useCFrame(usePart),
+                                }
+                            end
+                        end
+                    end
+                end
             end
         end
-        return nil, table.concat(kinds, "/") .. " model not loaded yet"
+        for _, kind in ipairs(kinds) do
+            local spot = KNOWN_HOUSE_SPOTS[kind]
+            if spot then
+                return spot
+            end
+        end
+        return nil, table.concat(kinds, "/") .. " not found in house"
     end
     return Furniture
 end
@@ -11141,12 +11171,7 @@ __moduleSources["Game/Tasks"] = function(...)
             if not stoodUp then
                 return false, standReason
             end
-            if not ctx.travel:isAt(GameConstants.HouseInteriorName) then
-                local ok, reason = ctx.travel:goTo(GameConstants.HouseInteriorName)
-                if not ok then
-                    return false, "going home: " .. tostring(reason)
-                end
-            end
+            -- Remote house furniture: activated from anywhere without traveling home
             local spot, spotReason = nil, nil
             ctx.waitUntil(function()
                 spot, spotReason = ctx.furniture:findSpot(kinds)
@@ -11697,6 +11722,27 @@ __moduleSources["Game/Tasks"] = function(...)
             and Util.now() - mysteryLookupDone > 300) then
             mysteryLookupDone = Util.now()
             findMysterySlotsFn(ctx)
+        end
+        local rs = game:GetService("ReplicatedStorage")
+        local okHelper, MysteryHelper = pcall(require, rs.new.modules.Ailments.Helpers.MysteryHelper)
+        if okHelper and MysteryHelper and MysteryHelper.get_action then
+            local manager = ctx.gameData:get(GameConstants.DataKeys.Ailments)
+            local ailments = type(manager) == "table" and manager.ailments
+            local mine = type(ailments) == "table" and ailments[entry.petUnique]
+            local raw = type(mine) == "table" and mine.mystery
+            if raw then
+                local action = MysteryHelper.get_action(raw)
+                local petObj = {
+                    is_pet = true,
+                    pet_unique = entry.petUnique,
+                    pet_id = entry.petKind,
+                    player = Players.LocalPlayer
+                }
+                local okSlots, slots = pcall(function() return action:_get_ailment_slots(petObj) end)
+                if okSlots and type(slots) == "table" and #slots > 0 then
+                    return slots, "MysteryHelper"
+                end
+            end
         end
         if not mysteryClient then
             return nil, "no MysteryAilmentClient"
@@ -15578,16 +15624,10 @@ __moduleSources["Game/EventTasks"] = function(...)
             local function queued()
                 return mg.joinAcceptedAt ~= nil or mg.join ~= nil or EventTasks.inQueueByHint("ghost", queueSince)
             end
-            local okPrompt, byPrompt = pcall(EventTasks.viaPrompt, ctx, "ghost", "HauntedManor", tonumber(start), queued)
-            byPrompt = okPrompt and byPrompt == true
-            -- v2.1.29 (hauntlet_debug: the run took me on the server, the device stayed in the lobby): the game's own
-            -- teleport brought me = no trip / "draw again" of mine on top of it (it can break the game's next move)
-            if not queued() and not byPrompt then
-                phase(ctx, "going to the Manor", tonumber(start))
-                local arrived, why = ctx.travel:goTo("HauntedManor")
-                if not arrived and not queued() then
-                    return false, "travel to the Manor failed: " .. tostring(why)
-                end
+            -- Direct TP to HauntedManor at 1 min mark (no going home)
+            if not queued() and not ctx.travel:isAt("HauntedManor") then
+                phase(ctx, "going to HauntedManor at 1 min mark", tonumber(start))
+                ctx.travel:goTo("HauntedManor")
             end
             local byZone = not (ctx.farmConfig.Event and ctx.farmConfig.Event.GhostJoinByZone == false)
             local inZone = false
@@ -15695,10 +15735,12 @@ __moduleSources["Game/EventTasks"] = function(...)
                 ctx.waitUntil(function()
                     return not inRound()
                 end, 15)
-                phase(ctx, "round over: going home")
-                local home, homeWhy = ctx.travel:goTo(GameConstants.HouseInteriorName)
-                if not home then
-                    ctx.logger:info("Event", "Ghost Gallery: going home after the round did not work (" .. tostring(homeWhy) .. ")")
+                phase(ctx, "round over: returning to underground platform")
+                local platform = workspace:FindFirstChild("AdoptMeFarm_UndergroundPlatform")
+                local char = Players.LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root and platform then
+                    root.CFrame = platform.CFrame + Vector3.new(0, 5, 0)
                 end
                 return ok, reason
             end
@@ -15884,20 +15926,13 @@ __moduleSources["Game/EventTasks"] = function(...)
                 end
                 local startGuess = (group and tonumber(group.start))
                     or EventTasks.nextRoundStart(ctx.gameData:get(KEYS.HauntletCycle), Minigame.serverNow(), E.HauntletRoundSeconds)
-                local okPrompt, byPrompt = pcall(EventTasks.viaPrompt, ctx, "hauntlet", E.HauntletLobby, startGuess, queued)
-                byPrompt = okPrompt and byPrompt == true
-                -- v2.1.29 (hauntlet_debug 23:23: "the run is on for the server (hearts), but the game did not take me
-                -- into it", still in HauntedHotel): after the game's own teleport no trip / "draw again" of mine on top
-                -- of it (InteriorsM.enter for the place I am already in can leave the game's next move undone)
-                if not queued() and not byPrompt then
-                    phase(ctx, "going to the Hotel", startGuess)
-                    local arrived, why = ctx.travel:goTo(E.HauntletLobby)
-                    if not arrived and not queued() then
-                        return false, "travel to the Hotel failed: " .. tostring(why)
-                    end
+                -- Direct TP to HauntedHotel at 1 min mark (no going home)
+                if not queued() and not ctx.travel:isAt(E.HauntletLobby) then
+                    phase(ctx, "going to HauntedHotel at 1 min mark", startGuess)
+                    ctx.travel:goTo(E.HauntletLobby)
                 end
                 -- Task is only scheduled near T-45. Enter the circle at T-30 (or immediately if already closer).
-                local HAUNTLET_JOIN_LEAD = 30
+                local HAUNTLET_JOIN_LEAD = 58
                 local serverNow = Minigame.serverNow()
                 local startAt = (group and tonumber(group.start))
                     or EventTasks.nextRoundStart(ctx.gameData:get(KEYS.HauntletCycle), serverNow, E.HauntletRoundSeconds)
@@ -16384,10 +16419,27 @@ __moduleSources["Game/EventTasks"] = function(...)
                             if Util.now() < moveLockUntil then
                                 task.wait(moveLockUntil - Util.now())
                             end
-                            say(string.format("Entering selected door %d at %.1f s", door, h:roomElapsed()))
+                            say(string.format("Selecting door %d via Remote at %.1f s", door, h:roomElapsed()))
                             digest.door, digest.doorAt = door, h:roomElapsed()
                             local movedAt = Util.now()
                             h.expectDoor, h.expectAt, h.mappingSuspect = door, movedAt, nil
+
+                            -- Direct Remote pick for door selection
+                            local sessionId = h.join and h.join.sessionId
+                            if sessionId and tonumber(door) then
+                                pcall(function()
+                                    ctx.interaction:send("HauntletMessage", sessionId, "try_pick_door", tonumber(door))
+                                end)
+                                pcall(function()
+                                    local rs = game:GetService("ReplicatedStorage")
+                                    local MCM = require(rs.ClientModules.Game.MinigameClientManager)
+                                    local inst = MCM.get(sessionId) or MCM.get("hauntlet")
+                                    if inst and type(inst) == "table" then
+                                        inst.selected_door_index = tonumber(door)
+                                    end
+                                end)
+                            end
+
                             local moved, how, part, used, verified = ctx.interaction:teleportToHauntletDoor(
                                 h.join and h.join.interior, door, { avoid = avoid, bad = bad, method = moveMethod,
                                     nexus = room.kind == "nexus" or room.kind == "final_nexus", link = lastLink,
@@ -16398,7 +16450,7 @@ __moduleSources["Game/EventTasks"] = function(...)
                                 say(how)
                                 chainGroup, chainBroken = nil, true -- a wrong chain: look for the room forward next time
                             end
-                            if moved then
+                            if moved or h.picked or h.myDoor == door then
                                 circles = used
                                 picks += 1
                                 ctx.waitUntil(function() -- a pick shows within ~0.3 s when the circle is the right one
@@ -17413,9 +17465,9 @@ __moduleSources["Game/TaskManager"] = function(...)
     TaskManager.__index = TaskManager
     local TEAM_KEY = "team"
     local EVENT_RECHECK_SECONDS = { ghost_gallery = 120, stray_cat = 1800, crypt = 60, pigeon_nest = 60, quests = 300, pen_stock = 20, age_potion = 5, open_gift = 3, neon_fusion = 2, mega_fusion = 2, candy_pet = 30, shop_gift = 30, house_visits = 300, hauntlet = 90, skelicorn = 120 }
-    local GHOST_GALLERY_LEAD_SECONDS = 75
-    local GHOST_INTERRUPT_SECONDS = 72
-    local HAUNTLET_LEAD_SECONDS = 75 -- v2.1.9: home first, then the game's prompt at T-45
+    local GHOST_GALLERY_LEAD_SECONDS = 60 -- TP at 1 min mark
+    local GHOST_INTERRUPT_SECONDS = 60
+    local HAUNTLET_LEAD_SECONDS = 60 -- TP at 1 min mark
     local HAUNTLET_GHOST_GAP_SECONDS = 420
     local HAUNTLET_INTERRUPT_SECONDS = 72 -- Farm.Event.HauntletFirst: a normal task stops this long before a run
     local GHOST_ROUND_BUSY_SECONDS = 270 -- a Ghost Gallery round with travel ("Done: Ghost Gallery round in 244 s")
@@ -20102,6 +20154,33 @@ __moduleSources["main"] = function(...)
                 })
                 taskManager:start(maid)
                 state:set("game.ready", true, "main")
+
+                -- Underground Studded Platform setup
+                task.spawn(function()
+                    task.wait(1)
+                    local platformName = "AdoptMeFarm_UndergroundPlatform"
+                    local platform = workspace:FindFirstChild(platformName)
+                    if not platform or not platform:IsA("BasePart") then
+                        platform = Instance.new("Part")
+                        platform.Name = platformName
+                        platform.Size = Vector3.new(60, 4, 60)
+                        platform.Anchored = true
+                        platform.CanCollide = true
+                        platform.TopSurface = Enum.SurfaceType.Studs
+                        platform.BottomSurface = Enum.SurfaceType.Inlet
+                        platform.Material = Enum.Material.Plastic
+                        platform.BrickColor = BrickColor.new("Medium stone grey")
+                        platform.CFrame = CFrame.new(-100, -80, -100)
+                        platform.Parent = workspace
+                    end
+                    local char = Players.LocalPlayer.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    if root and platform then
+                        root.CFrame = platform.CFrame + Vector3.new(0, 5, 0)
+                        root.AssemblyLinearVelocity = Vector3.zero
+                        root.AssemblyAngularVelocity = Vector3.zero
+                    end
+                end)
             else
                 state:set("game.ready", false, "main")
             end
