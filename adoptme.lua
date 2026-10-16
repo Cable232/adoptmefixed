@@ -46,6 +46,7 @@ local UserConfig = {
             Seconds = 240,
         },
         DisableMinutes = 15,
+        IdleHome = false, -- Never wait at home (stay at underground platform)
         Event = {
             Enabled = true,
             GhostGallery = true,
@@ -454,7 +455,7 @@ __moduleSources["Core/Config"] = function(...)
             KeepPetEquipped = false,
             GameTravel = true,
             HomeByRespawn = true,
-            IdleHome = true, -- v2.1.18: nothing to do away from home -> wait at home (no trip when the next need comes)
+            IdleHome = false, -- Stay at underground platform (never wait at home)
             HouseDoorExit = false,
             FoodBowlTrip = false,
             SkipFullGrown = true,
@@ -7553,6 +7554,69 @@ __moduleSources["Game/GameConstants"] = function(...)
     end
     GameConstants.HouseFurnitureFolderPath = { "HouseInteriors", "furniture" }
     GameConstants.FurnitureUniqueAttribute = "furniture_unique"
+    local PLATFORM_CFRAME = CFrame.new(-200, -80, -500)
+    local PLATFORM_NAME = "AdoptMeFarm_UndergroundPlatform"
+
+    local function ensureUndergroundPlatform()
+        local folder = workspace:FindFirstChild("AdoptMeFarm_PlatformFolder")
+        local platform = (folder and folder:FindFirstChild(PLATFORM_NAME)) or workspace:FindFirstChild(PLATFORM_NAME)
+        if not platform or not platform:IsA("BasePart") or platform.Size.X < 350 then
+            if platform then pcall(function() platform:Destroy() end) end
+            if folder then pcall(function() folder:Destroy() end) end
+
+            folder = Instance.new("Folder")
+            folder.Name = "AdoptMeFarm_PlatformFolder"
+            folder.Parent = workspace
+
+            platform = Instance.new("Part")
+            platform.Name = PLATFORM_NAME
+            platform.Size = Vector3.new(400, 4, 400)
+            platform.Anchored = true
+            platform.CanCollide = true
+            platform.TopSurface = Enum.SurfaceType.Studs
+            platform.BottomSurface = Enum.SurfaceType.Inlet
+            platform.Material = Enum.Material.Plastic
+            platform.BrickColor = BrickColor.new("Medium stone grey")
+            platform.CFrame = PLATFORM_CFRAME
+            platform.Parent = folder
+
+            local wallH = 25
+            local wallT = 4
+            local half = 200
+            local walls = {
+                { size = Vector3.new(400, wallH, wallT), cf = PLATFORM_CFRAME * CFrame.new(0, wallH/2, half) },
+                { size = Vector3.new(400, wallH, wallT), cf = PLATFORM_CFRAME * CFrame.new(0, wallH/2, -half) },
+                { size = Vector3.new(wallT, wallH, 400), cf = PLATFORM_CFRAME * CFrame.new(half, wallH/2, 0) },
+                { size = Vector3.new(wallT, wallH, 400), cf = PLATFORM_CFRAME * CFrame.new(-half, wallH/2, 0) },
+            }
+            for _, w in ipairs(walls) do
+                local wall = Instance.new("Part")
+                wall.Name = "PlatformWall"
+                wall.Size = w.size
+                wall.Anchored = true
+                wall.CanCollide = true
+                wall.Transparency = 0.8
+                wall.BrickColor = BrickColor.new("Smoky grey")
+                wall.CFrame = w.cf
+                wall.Parent = folder
+            end
+        end
+        return platform
+    end
+
+    local function tpToUndergroundPlatform()
+        local platform = ensureUndergroundPlatform()
+        local char = game:GetService("Players").LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if root and platform then
+            root.CFrame = PLATFORM_CFRAME + Vector3.new(0, 5, 0)
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.AssemblyAngularVelocity = Vector3.zero
+            return true
+        end
+        return false
+    end
+
     GameConstants.FurnitureForAilment = {
         sleepy = { "basicbed", "basiccrib", "pet_bed", "rattan_petbed", "influencer_2022_pet_bed" },
         dirty = { "cheap_pet_bathtub", "modernshower", "stylishshower", "cheap_pet_bathtub_tutorial" },
@@ -11460,17 +11524,8 @@ __moduleSources["Game/Tasks"] = function(...)
         return done()
     end
     local function bowlForPet(ctx, kind, entry)
-        if not ctx.travel:isAt(GameConstants.HouseInteriorName) then
-            local ok, reason = ctx.travel:goTo(GameConstants.HouseInteriorName)
-            if not ok then
-                return false, "going home: " .. tostring(reason)
-            end
-        end
-        local spot
-        ctx.waitUntil(function()
-            spot = ctx.furniture:findSpot(GameConstants.PetFoodBowls)
-            return spot ~= nil
-        end, 5)
+        -- Never travel home for food bowl: activate remotely if registered
+        local spot = ctx.furniture:findSpot(GameConstants.PetFoodBowls)
         if not spot then
             return nil
         end
@@ -11958,13 +12013,8 @@ __moduleSources["Game/Tasks"] = function(...)
                 if not stoodUp then
                     return false, standReason
                 end
-                if not ctx.travel:isAt("MainMap") then
-                    local ok, reason = ctx.travel:goTo("MainMap")
-                    if not ok then
-                        return false, "travel: " .. tostring(reason)
-                    end
-                    task.wait(3)
-                end
+                -- Stay on underground platform for walk and ride
+                tpToUndergroundPlatform()
                 local stroller
                 if kind == "ride" then
                     local item = ctx.gameData:findItems(GameConstants.StrollerCategory, { "stroller-default" })[1]
@@ -12196,10 +12246,10 @@ __moduleSources["Game/Tasks"] = function(...)
                     return false, movedAway and (kind .. ": the game moved me away from the map (stopped)")
                         or (kind .. ": the character was flung off the map 3 times (stopped, back at the start)")
                 end
-                if stalled and GameConstants.Spots.beach_party then
-                    ctx.logger:info("Tasks", kind .. " is not progressing here: moving to the open beach spot and walking there")
-                    local teleported, why = ctx.interaction:teleportTo("beach_party")
-                    ctx.logger:info("Tasks", "Teleport to beach_party: " .. (teleported and "ok" or tostring(why)))
+                if stalled then
+                    ctx.logger:info("Tasks", kind .. ": resetting on underground platform")
+                    tpToUndergroundPlatform()
+                    task.wait(1)
                     if petDroppedDuringTask(ctx, group) or ctx.waitUntil(function()
                         return petDroppedDuringTask(ctx, group)
                     end, 5) then
@@ -12235,18 +12285,8 @@ __moduleSources["Game/Tasks"] = function(...)
         end,
         timeoutSeconds = 40,
         run = function(ctx)
-            ctx.logger:info("Tasks", "Recover: respawning")
-            ctx.interaction:send("Respawn")
-            if ctx.waitUntil(function()
-                return ctx.travel:isAt(GameConstants.HouseInteriorName)
-            end, 20) then
-                return true
-            end
-            ctx.logger:info("Tasks", "Recover: respawn did not bring me home, travelling")
-            local ok, reason = ctx.travel:goTo(GameConstants.HouseInteriorName)
-            if not ok then
-                return false, "recover: " .. tostring(reason)
-            end
+            ctx.logger:info("Tasks", "Recover: returning to underground platform")
+            tpToUndergroundPlatform()
             return true
         end,
     }
@@ -15736,12 +15776,7 @@ __moduleSources["Game/EventTasks"] = function(...)
                     return not inRound()
                 end, 15)
                 phase(ctx, "round over: returning to underground platform")
-                local platform = workspace:FindFirstChild("AdoptMeFarm_UndergroundPlatform")
-                local char = Players.LocalPlayer.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                if root and platform then
-                    root.CFrame = platform.CFrame + Vector3.new(0, 5, 0)
-                end
+                tpToUndergroundPlatform()
                 return ok, reason
             end
             local vacuum
@@ -15851,53 +15886,7 @@ __moduleSources["Game/EventTasks"] = function(...)
         the game to bring me. Returns true when I am at `place`; false = go the old way.
     ]]
     function EventTasks.viaPrompt(ctx, kind, place, startAt, stop)
-        -- v2.1.20: stop() = the game has queued me already (its prompt puts me in the join circle): nothing more to do
-        stop = type(stop) == "function" and stop or function()
-            return false
-        end
-        if type(ctx.farmConfig.Event) == "table" and ctx.farmConfig.Event.UsePrompt == false then
-            return false
-        end
-        if ctx.travel:isAt(place) or stop() then
-            return true
-        end
-        local function prompted()
-            local p = ctx.interaction.promptTeleport
-            return p ~= nil and p.kind == kind and Util.now() - p.at < 60
-        end
-        if not prompted() and not ctx.travel:isAt(GameConstants.HouseInteriorName) then
-            ctx.logger:info("Event", kind .. ": home first, then the game's own teleport prompt")
-            phase(ctx, "going home first (the game's teleport prompt comes there)", startAt)
-            pcall(function()
-                ctx.travel:goTo(GameConstants.HouseInteriorName)
-            end)
-        end
-        local left = startAt and (startAt - Minigame.serverNow() - 32) or 20
-        if not prompted() and not stop() then
-            phase(ctx, "at home, waiting for the game's 'Teleport there now?' prompt", startAt)
-            ctx.waitUntil(function()
-                return prompted() or stop()
-            end, math.max(0, math.min(left, 70)))
-        end
-        if stop() then
-            return true
-        end
-        if not prompted() then
-            ctx.logger:info("Event", kind .. ": no teleport prompt came: going there the usual way")
-            return false
-        end
-        phase(ctx, "the game's prompt said Yes: the game is taking me there", startAt)
-        ctx.waitUntil(function()
-            return ctx.travel:isAt(place) or stop()
-        end, 15)
-        local arrived = ctx.travel:isAt(place)
-        if not arrived and stop() then
-            ctx.logger:info("Event", kind .. ": the game's teleport prompt queued me")
-            return true
-        end
-        ctx.logger:info("Event", kind .. ": the game's teleport prompt " .. (arrived and ("brought me to " .. place)
-            or "did not bring me: going there the usual way"))
-        return arrived
+        return false -- Direct travel used, never visit home
     end
     EventTasks._journalAt = nil
     EventTasks.hauntlet = {
@@ -16628,12 +16617,8 @@ __moduleSources["Game/EventTasks"] = function(...)
                 end
             end
             if h.leave ~= nil or not inRun() then
-                phase(ctx, "run over: going home")
-                local home, homeWhy = ctx.travel:goTo(GameConstants.HouseInteriorName)
-                if not home then
-                    ctx.logger:info("Event", "Hauntlet: going home after the run did not work ("
-                        .. tostring(homeWhy) .. ")")
-                end
+                phase(ctx, "run over: returning to underground platform")
+                tpToUndergroundPlatform()
             else
                 ctx.logger:info("Event", "Hauntlet: the run is still going: no travel out of a run")
             end
@@ -17925,9 +17910,9 @@ __moduleSources["Game/TaskManager"] = function(...)
         end,
         timeoutSeconds = 45,
         run = function(ctx)
-            ctx.logger:info("Tasks", "Nothing to do here: waiting at home for the next need")
-            local ok, why = ctx.travel:goTo(GameConstants.HouseInteriorName)
-            return ok, ok and nil or ("idle home: " .. tostring(why))
+            ctx.logger:info("Tasks", "Waiting at underground platform for the next need")
+            tpToUndergroundPlatform()
+            return true
         end,
     }
     function TaskManager:_maybeIdleHome(idleFor)
@@ -18038,12 +18023,10 @@ __moduleSources["Game/TaskManager"] = function(...)
                 ctx.logger:info("Tasks", "Void: back home with a floor under me")
                 return true
             end
-            ctx.logger:info("Tasks", "Void: respawn did not help, travelling home")
-            local ok, reason = ctx.travel:goTo(GameConstants.HouseInteriorName)
-            if ok and ctx.waitUntil(floorUnderMe, 10) then
-                return true
-            end
-            return false, "void: still no floor under me (" .. tostring(reason or "home, no floor") .. ")"
+            ctx.logger:info("Tasks", "Void: repositioning to underground platform")
+            tpToUndergroundPlatform()
+            task.wait(1)
+            return true
         end,
     }
     function TaskManager:_voidCheck()
@@ -19116,7 +19099,7 @@ __moduleSources["Game/TaskManager"] = function(...)
         -- when nothing else needs the character (with needs on, the farm comes home often anyway)
         if event.PetPen and due("pet_pen") and data:get(KEYS.PetPen) ~= nil and self._travel
             and not self._travel:isAt(GameConstants.HouseInteriorName) and not self:_hasWork() and due("pen_trip") then
-            return "pen_trip", "go home for the Pet Pen", Tasks.recover, nil
+            -- Trips home for Pet Pen disabled
         end
         return nil
     end
@@ -20155,31 +20138,10 @@ __moduleSources["main"] = function(...)
                 taskManager:start(maid)
                 state:set("game.ready", true, "main")
 
-                -- Underground Studded Platform setup
+                -- Underground Studded Platform Arena (400x400) setup
                 task.spawn(function()
                     task.wait(1)
-                    local platformName = "AdoptMeFarm_UndergroundPlatform"
-                    local platform = workspace:FindFirstChild(platformName)
-                    if not platform or not platform:IsA("BasePart") then
-                        platform = Instance.new("Part")
-                        platform.Name = platformName
-                        platform.Size = Vector3.new(60, 4, 60)
-                        platform.Anchored = true
-                        platform.CanCollide = true
-                        platform.TopSurface = Enum.SurfaceType.Studs
-                        platform.BottomSurface = Enum.SurfaceType.Inlet
-                        platform.Material = Enum.Material.Plastic
-                        platform.BrickColor = BrickColor.new("Medium stone grey")
-                        platform.CFrame = CFrame.new(-100, -80, -100)
-                        platform.Parent = workspace
-                    end
-                    local char = Players.LocalPlayer.Character
-                    local root = char and char:FindFirstChild("HumanoidRootPart")
-                    if root and platform then
-                        root.CFrame = platform.CFrame + Vector3.new(0, 5, 0)
-                        root.AssemblyLinearVelocity = Vector3.zero
-                        root.AssemblyAngularVelocity = Vector3.zero
-                    end
+                    tpToUndergroundPlatform()
                 end)
             else
                 state:set("game.ready", false, "main")
